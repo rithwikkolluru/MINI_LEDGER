@@ -1,0 +1,12 @@
+import { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { api } from '../src/api';
+import { colors } from '../src/theme';
+import { Button, Field } from '../src/ui';
+export default function Login() {
+  const [number, setNumber] = useState(''); const [busy, setBusy] = useState(false);
+  const send = async () => { const digits = number.replace(/\D/g, ''); if (digits.length < 10 || digits.length > 12) return Alert.alert('Check your number', 'Enter a valid phone number.'); const phone = `+91${digits.slice(-10)}`; setBusy(true); try { await api.requestOtp(phone); router.push({ pathname: '/verify', params: { phone } }); } catch (e: any) { Alert.alert('Could not send code', e.message); } finally { setBusy(false); } };
+  return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.bg }}><ScrollView contentContainerStyle={{ flexGrow: 1, padding: 25, paddingTop: 76, justifyContent: 'space-between' }} keyboardShouldPersistTaps="handled"><View><View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', marginBottom: 30 }}><Ionicons name="leaf" color="white" size={26} /></View><Text style={{ color: colors.green, fontSize: 12, fontWeight: '800', letterSpacing: 2 }}>MINILEDGER</Text><Text style={{ fontSize: 38, lineHeight: 44, fontWeight: '800', color: colors.ink, marginTop: 14, letterSpacing: -1 }}>Every loan.{ '\n' }Every promise.</Text><Text style={{ fontSize: 16, color: colors.muted, lineHeight: 24, marginTop: 15 }}>A calmer way to keep track of the money you lend.</Text><View style={{ marginTop: 44, gap: 18 }}><Field label="Your phone number · India (+91)" value={number} onChangeText={setNumber} keyboardType="phone-pad" placeholder="98765 43210" maxLength={12} /><Button title="Send verification code" icon="arrow-forward" onPress={send} disabled={busy} /></View></View><View style={{ flexDirection: 'row', gap: 9, alignItems: 'center', justifyContent: 'center', paddingBottom: 12 }}><Ionicons name="lock-closed-outline" size={15} color={colors.muted} /><Text style={{ color: colors.muted, fontSize: 12 }}>Your financial details stay private and secure.</Text></View></ScrollView></KeyboardAvoidingView>;
+}
