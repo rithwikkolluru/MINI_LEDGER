@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String         @id @default(uuid()) @db.Char(36)
+  phoneNumber String         @unique @map("phone_number") @db.VarChar(32)
+  timezone    String         @default("Asia/Kolkata") @db.VarChar(64)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
+  loans       Loan[]
+  refreshes   RefreshToken[]
+
+  @@map("users")
+}
+
+model OtpChallenge {
+  id          String    @id @default(uuid()) @db.Char(36)
+  phoneNumber String    @map("phone_number") @db.VarChar(32)
+  otpHash     String    @map("otp_hash") @db.VarChar(128)
+  expiresAt   DateTime  @map("expires_at") @db.DateTime(3)
+  attempts    Int       @default(0) @db.UnsignedTinyInt
+  consumedAt  DateTime? @map("consumed_at") @db.DateTime(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([phoneNumber, createdAt])
+  @@index([expiresAt])
+  @@map("otp_challenges")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Char(36)
+  userId    String    @map("user_id") @db.Char(36)
+  tokenHash String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt DateTime  @map("expires_at") @db.DateTime(3)
+  revokedAt DateTime? @map("revoked_at") @db.DateTime(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Loan {
+  id             String     @id @default(uuid()) @db.Char(36)
+  userId         String     @map("user_id") @db.Char(36)
+  friendName     String     @map("friend_name") @db.VarChar(160)
+  friendPhone    String?    @map("friend_phone") @db.VarChar(32)
+  originalAmount Decimal    @map("original_amount") @db.Decimal(13, 2)
+  loanDate       DateTime   @map("loan_date") @db.Date
+  dueDate        DateTime   @map("due_date") @db.Date
+  notes          String?    @db.Text
+  createdAt      DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.DateTime(3)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repayments    Repayment[]
+  receipts      Receipt[]
+
+  @@index([userId, dueDate])
+  @@index([userId, createdAt])
+  @@index([userId, friendName])
+  @@map("loans")
+}
+
+model Repayment {
+  id           String   @id @default(uuid()) @db.Char(36)
+  loanId       String   @map("loan_id") @db.Char(36)
+  amount       Decimal  @db.Decimal(13, 2)
+  repaymentDate DateTime @map("repayment_date") @db.Date
+  note         String?  @db.VarChar(1000)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  loan         Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId, repaymentDate, createdAt])
+  @@map("repayments")
+}
+
+model Receipt {
+  id               String   @id @default(uuid()) @db.Char(36)
+  loanId           String   @map("loan_id") @db.Char(36)
+  storageKey       String   @map("storage_key") @db.VarChar(512)
+  originalFilename String   @map("original_filename") @db.VarChar(255)
+  contentType      String   @map("content_type") @db.VarChar(100)
+  sizeBytes        Int      @map("size_bytes") @db.UnsignedInt
+  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  loan             Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@map("receipts")
+}
